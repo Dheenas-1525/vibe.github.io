@@ -1024,56 +1024,85 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
 <section class="section" id="updating">
   <div class="section-header fade-in">
     <div class="phase-pill">Operations · Updates</div>
-    <h2>🔄 Updating ViBe</h2>
-    <p class="section-desc">What to do when a new version of ViBe is released.</p>
+    <h2>🔄 Updating ViBe from Source</h2>
+    <p class="section-desc">Pull the latest developer code from GitHub, apply deployment patches, and rebuild — one command does everything.</p>
+  </div>
+
+  <div class="alert info fade-in">
+    <span class="alert-icon">ℹ️</span>
+    <div class="alert-body"><strong>Why not just git pull?</strong>
+    The developer's code is built for GCP. Running it self-hosted requires 8 patches (hardcoded URLs, MinIO instead of GCS, MongoDB retries). The update script re-applies all patches automatically after every pull so they are never lost.</div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-body"><h4>The one update command</h4><p>Run from the <span class="inline-code">vibe/</span> folder:</p></div></div>
+  </div>
+  <div class="code-wrap fade-in">
+    <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash — full update from GitHub</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code><span class="token-bash">bash update-and-rebuild.sh --git</span></code></pre>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">2</div><div class="step-body"><h4>What it does automatically</h4></div></div>
   </div>
   <div class="table-wrap fade-in">
-    <table><thead><tr><th>What Changed</th><th>Action Required</th></tr></thead>
+    <table><thead><tr><th>Step</th><th>Action</th></tr></thead>
     <tbody>
-      <tr><td>Backend code (bug fix, new API)</td><td><span class="inline-code">docker pull</span> + <span class="inline-code">docker compose up -d backend</span></td></tr>
-      <tr><td>Frontend code (UI change)</td><td><span class="inline-code">git pull</span> + <span class="inline-code">docker compose build frontend</span> + restart</td></tr>
-      <tr><td>New backend env variable</td><td>Add to <span class="inline-code">backend.env</span> → restart backend (no rebuild)</td></tr>
-      <tr><td>New frontend env variable</td><td>Add to <span class="inline-code">frontend/.env</span> → <strong>rebuild</strong> frontend image</td></tr>
-      <tr><td>Database schema change</td><td>Nothing — MongoDB is schema-less, ViBe handles this automatically</td></tr>
+      <tr><td>1. Pull backend</td><td>Clones <span class="inline-code">vicharanashala/vibe</span> monorepo → copies <span class="inline-code">backend/</span> subfolder</td></tr>
+      <tr><td>2. Pull vibe-ai</td><td><span class="inline-code">git pull</span> on <span class="inline-code">vicharanashala/vibe-ai</span></td></tr>
+      <tr><td>3. Apply patches</td><td>Copies 8 fixed files from <span class="inline-code">vibe/patches/</span> over the pulled source</td></tr>
+      <tr><td>4. Build Docker</td><td><span class="inline-code">docker compose build backend vibe-aiserver</span></td></tr>
+      <tr><td>5. Restart</td><td><span class="inline-code">docker compose up -d</span></td></tr>
+      <tr><td>6. Health check</td><td>Waits up to 3 min for backend to become healthy, prints status</td></tr>
     </tbody></table>
   </div>
+
   <div class="steps">
-    <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Back up your database first</h4></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Your secrets are never overwritten</h4></div></div>
+  </div>
+  <div class="table-wrap fade-in">
+    <table><thead><tr><th>File</th><th>On update</th></tr></thead>
+    <tbody>
+      <tr><td><span class="inline-code">backend.env</span></td><td>✅ Kept — your secrets stay</td></tr>
+      <tr><td><span class="inline-code">frontend/.env</span></td><td>✅ Kept — your Firebase keys stay</td></tr>
+      <tr><td><span class="inline-code">firebase-service-account.json</span></td><td>✅ Kept — your credentials stay</td></tr>
+      <tr><td><span class="inline-code">litellm_config.yaml</span></td><td>✅ Kept — your LLM config stays</td></tr>
+      <tr><td><span class="inline-code">docker-compose.yml</span></td><td>✅ Kept — our deployment config stays</td></tr>
+      <tr><td><span class="inline-code">patches/</span></td><td>✅ Kept — our fixes stay</td></tr>
+      <tr><td><span class="inline-code">backend/src/</span></td><td>🔄 Replaced from GitHub, then patched</td></tr>
+      <tr><td><span class="inline-code">vibe-ai/src/</span></td><td>🔄 Replaced from GitHub, then patched</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Patch-only rebuild (no git pull)</h4><p>Use when the developer sent a ZIP file, or you want to rebuild without pulling:</p></div></div>
+  </div>
+  <div class="code-wrap fade-in">
+    <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash — patch + rebuild only</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code><span class="token-bash">bash update-and-rebuild.sh</span>
+<span class="token-comment2"># (no --git flag = skips GitHub pull)</span></code></pre>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">5</div><div class="step-body"><h4>Update logs</h4><p>Every run saves a timestamped log:</p></div></div>
   </div>
   <div class="code-wrap fade-in">
     <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-    <pre><code><span class="token-bash">mongodump --uri="YOUR_DB_URL" --out=./backup-$(date +%Y%m%d-%H%M%S)</span></code></pre>
+    <pre><code><span class="token-comment2"># View latest update log</span>
+<span class="token-bash">ls vibe/update-logs/</span>
+<span class="token-bash">cat vibe/update-logs/update_2026-06-03_17-00-00.log</span></code></pre>
   </div>
+
   <div class="steps">
-    <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Pull code and check for new env variables</h4></div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-body"><h4>Roll back if something breaks</h4></div></div>
   </div>
   <div class="code-wrap fade-in">
-    <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-    <pre><code><span class="token-bash">git pull origin main</span>
-<span class="token-comment2"># See what new env variables exist in the example but not in your file</span>
-<span class="token-bash">diff backend.env self-hosting/backend.env.example</span>
-<span class="token-bash">diff frontend/.env self-hosting/frontend.env.example</span></code></pre>
-  </div>
-  <div class="steps">
-    <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Full update (safest option)</h4></div></div>
-  </div>
-  <div class="code-wrap fade-in">
-    <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash — one-shot full update</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-    <pre><code><span class="token-bash">docker pull vicharanashala/vibe-backend:staging</span>
-<span class="token-bash">docker compose build frontend</span>
-<span class="token-bash">docker compose down && docker compose up -d</span>
-<span class="token-bash">docker compose ps</span></code></pre>
-  </div>
-  <div class="steps">
-    <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Roll back if something breaks</h4></div></div>
-  </div>
-  <div class="code-wrap fade-in">
-    <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash — rollback backend to previous image</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-    <pre><code><span class="token-comment2"># List all cached backend images</span>
-<span class="token-bash">docker images vicharanashala/vibe-backend</span>
-<span class="token-comment2"># Tag the previous image and restart with it</span>
-<span class="token-bash">docker tag &lt;PREVIOUS_IMAGE_ID&gt; vicharanashala/vibe-backend:rollback</span>
-<span class="token-comment2"># Edit docker-compose.yml: change tag to :rollback, then:</span>
+    <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash — rollback to previous Docker image</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code><span class="token-comment2"># Find the previous image ID</span>
+<span class="token-bash">docker images | grep vibe-backend</span>
+<span class="token-comment2"># Tag it and restart with it</span>
+<span class="token-bash">docker tag &lt;OLD_IMAGE_ID&gt; vibe-backend:rollback</span>
+<span class="token-comment2"># Edit docker-compose.yml: image: vibe-backend:rollback — then:</span>
 <span class="token-bash">docker compose up -d backend</span></code></pre>
   </div>
 </section>
