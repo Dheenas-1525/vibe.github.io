@@ -913,7 +913,7 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
     <div class="pipe-arrow">→</div>
     <div class="pipe-step"><div class="pipe-num">Step 5</div><div class="pipe-name">Upload to ViBe</div><div class="pipe-tool">MongoDB</div></div>
   </div>
-  <div class="alert info fade-in"><div class="alert-icon">💡</div><div class="alert-body"><strong>LM Studio is only needed for Step 4</strong>Steps 1–3 use ONNX models that run locally inside the vibe-ai server. Only question generation (Step 4) calls LM Studio.</div></div>
+  <div class="alert info fade-in"><div class="alert-icon">💡</div><div class="alert-body"><strong>LM Studio is only needed for Step 4</strong>Steps 1–3 use ONNX models that run locally inside the vibe-ai server. Only question generation (Step 4) calls LM Studio. Questions are generated <strong>one at a time</strong> so each LLM call stays within token limits — watch progress with <span class="inline-code">docker logs vibe-aiserver --follow</span>. Intermediate audio and transcript files are automatically deleted after questions are saved.</div></div>
   <div class="steps">
     <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Install LM Studio on the AI server machine</h4><p><strong>Desktop (macOS/Windows):</strong> Download from <strong>lmstudio.ai</strong> and install.<br/><strong>Linux headless server:</strong> Use the CLI below.</p></div></div>
   </div>
@@ -1148,12 +1148,41 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
     </div>
   </div>
 
-  <div class="card fade-in">
+  <div class="card fade-in" style="margin-bottom:.75rem">
     <h3>Frontend env changes have no effect</h3>
     <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">Frontend env variables are baked in at build time. After any change to <span class="inline-code">frontend/.env</span> you must rebuild:</p>
     <div class="code-wrap" style="margin-top:.75rem">
       <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
       <pre><code><span class="token-bash">docker compose build frontend && docker compose up -d frontend</span></code></pre>
+    </div>
+  </div>
+
+  <div class="card fade-in" style="margin-bottom:.75rem">
+    <h3>Video pipeline: question generation produces empty results</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">The job completes but 0 questions are saved. This was caused by the LLM being asked to generate all questions in one call — the JSON response exceeded the model's token limit and was silently truncated. <strong>This is fixed in the current codebase</strong> — questions are now generated one at a time.</p>
+    <div style="font-size:.82rem;color:var(--text2);margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+      <div>→ Watch live progress: <span class="inline-code">docker logs vibe-aiserver --follow</span></div>
+      <div>→ You should see: <span class="inline-code">Generated SOL question 1/10 for segment ...</span></div>
+      <div>→ If errors appear: check LM Studio is loaded and responding: <span class="inline-code">curl http://localhost:1234/v1/models</span></div>
+      <div>→ If you rebuilt the container and questions are still empty, confirm you're running the rebuilt image: <span class="inline-code">docker compose build vibe-aiserver && docker compose up -d vibe-aiserver</span></div>
+    </div>
+  </div>
+
+  <div class="card fade-in" style="margin-bottom:.75rem">
+    <h3>Video pipeline: no logs from question generation in docker logs</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">If <span class="inline-code">docker logs vibe-aiserver</span> stops at "Starting question generation task" with nothing after — the container was built without <span class="inline-code">PYTHONUNBUFFERED=1</span>. Background thread output was buffered and never flushed. <strong>Fixed in the current Dockerfile.</strong></p>
+    <div class="code-wrap" style="margin-top:.75rem">
+      <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash — rebuild to get the fix</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="token-bash">docker compose build vibe-aiserver</span>
+<span class="token-bash">docker compose up -d vibe-aiserver</span></code></pre>
+    </div>
+  </div>
+
+  <div class="card fade-in">
+    <h3>Video pipeline: job stuck after container restart</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">In-memory task state is lost on restart. If the backend cannot abort a job, it stays permanently at RUNNING. The abort endpoint now returns HTTP 200 even when no task is found — allowing the backend to mark the job ABORTED so it can be retried.</p>
+    <div style="font-size:.82rem;color:var(--text2);margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+      <div>→ In the dashboard: click <strong>Abort</strong> → wait for status to change to ABORTED → click <strong>Rerun</strong></div>
     </div>
   </div>
 </section>
