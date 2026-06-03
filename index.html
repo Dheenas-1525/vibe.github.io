@@ -1190,6 +1190,26 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
   </div>
 
   <div class="card fade-in" style="margin-bottom:.75rem">
+    <h3>Video pipeline: question generation loops / job keeps restarting</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">Questions generate partially (e.g. 1–5 succeed) then stop with <span class="inline-code">"No models loaded"</span> errors for the rest. The backend re-triggers the job and the cycle repeats. <strong>Root cause: LM Studio's auto-unload feature drops the model during the idle gap between question calls.</strong></p>
+    <div style="font-size:.82rem;color:var(--text2);margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+      <div>→ <strong>Fix:</strong> Open LM Studio → Settings (gear icon, bottom-left) → <strong>Performance</strong> tab → set <strong>"Automatically unload model after X minutes of inactivity"</strong> to <strong>Never</strong></div>
+      <div>→ Confirm the model stays loaded during the full run: <span class="inline-code">curl http://localhost:1234/v1/models</span></div>
+      <div>→ Verify in logs — all 10 lines should appear without errors: <span class="inline-code">docker logs vibe-aiserver --follow</span></div>
+    </div>
+  </div>
+
+  <div class="card fade-in" style="margin-bottom:.75rem">
+    <h3>Publishing learning module fails / "Uploaded to course" error</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">After reviewing questions, clicking <strong>Publish to Course</strong> fails with a 500 error. Root cause: MongoDB write conflict (error code 112) during the long publish transaction — the existing retry logic only caught <span class="inline-code">TransientTransactionError</span>-labelled errors. <strong>Fixed in the current codebase</strong> — <span class="inline-code">BaseService.ts</span> now also retries on write conflict code 112 with backoff.</p>
+    <div style="font-size:.82rem;color:var(--text2);margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+      <div>→ If you see this error, rebuild and restart the backend: <span class="inline-code">docker compose build backend && docker compose up -d backend</span></div>
+      <div>→ Then try publishing again — the transaction will retry automatically on conflict</div>
+      <div>→ Confirm in logs: <span class="inline-code">docker logs vibe-backend --follow</span> — no more <span class="inline-code">Write conflict during plan execution</span> errors</div>
+    </div>
+  </div>
+
+  <div class="card fade-in" style="margin-bottom:.75rem">
     <h3>Video pipeline: no logs from question generation in docker logs</h3>
     <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">If <span class="inline-code">docker logs vibe-aiserver</span> stops at "Starting question generation task" with nothing after — the container was built without <span class="inline-code">PYTHONUNBUFFERED=1</span>. Background thread output was buffered and never flushed. <strong>Fixed in the current Dockerfile.</strong></p>
     <div class="code-wrap" style="margin-top:.75rem">
