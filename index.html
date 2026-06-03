@@ -913,7 +913,7 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
     <div class="pipe-arrow">→</div>
     <div class="pipe-step"><div class="pipe-num">Step 5</div><div class="pipe-name">Upload to ViBe</div><div class="pipe-tool">MongoDB</div></div>
   </div>
-  <div class="alert info fade-in"><div class="alert-icon">💡</div><div class="alert-body"><strong>LM Studio is only needed for Step 4</strong>Steps 1–3 use ONNX models that run locally inside the vibe-ai server. Only question generation (Step 4) calls LM Studio. Questions are generated <strong>one at a time</strong> so each LLM call stays within token limits — watch progress with <span class="inline-code">docker logs vibe-aiserver --follow</span>. Intermediate audio and transcript files are automatically deleted after questions are saved.</div></div>
+  <div class="alert info fade-in"><div class="alert-icon">💡</div><div class="alert-body"><strong>LM Studio is only needed for Step 4</strong>Steps 1–3 use ONNX models that run locally inside the vibe-ai server. Only question generation (Step 4) calls LM Studio. Questions are generated <strong>one at a time</strong> so each LLM call stays within token limits — watch progress with <span class="inline-code">docker logs vibe-aiserver --follow</span>. Intermediate audio and transcript files are automatically deleted after questions are saved. Files are stored in <strong>MinIO</strong> (open-source self-hosted object storage — no cloud account or credit card needed).</div></div>
   <div class="steps">
     <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Install LM Studio on the AI server machine</h4><p><strong>Desktop (macOS/Windows):</strong> Download from <strong>lmstudio.ai</strong> and install.<br/><strong>Linux headless server:</strong> Use the CLI below.</p></div></div>
   </div>
@@ -1154,6 +1154,27 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
     <div class="code-wrap" style="margin-top:.75rem">
       <div class="code-header"><div class="code-dots"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div></div><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
       <pre><code><span class="token-bash">docker compose build frontend && docker compose up -d frontend</span></code></pre>
+    </div>
+  </div>
+
+  <div class="card fade-in" style="margin-bottom:.75rem">
+    <h3>Video pipeline: transcript / questions show "Load failed"</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">After the AI finishes a stage, clicking the transcript or question preview shows <strong>"Load failed"</strong>. This was caused by the browser trying to fetch files from the internal Docker hostname (<span class="inline-code">minio:9000</span>) which is not reachable outside Docker. <strong>Fixed in the current codebase</strong> — the backend now rewrites internal URLs to <span class="inline-code">/gcs/...</span> and Nginx proxies those requests to MinIO.</p>
+    <div style="font-size:.82rem;color:var(--text2);margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+      <div>→ If you see this, rebuild the backend and frontend: <span class="inline-code">docker compose build backend frontend && docker compose up -d</span></div>
+      <div>→ Confirm <span class="inline-code">GCS_INTERNAL_URL=http://minio:9000</span> and <span class="inline-code">GCS_EXTERNAL_URL=/gcs</span> are set in <span class="inline-code">backend.env</span></div>
+      <div>→ Confirm the <span class="inline-code">/gcs/</span> location block is present in <span class="inline-code">frontend/nginx.conf</span></div>
+    </div>
+  </div>
+
+  <div class="card fade-in" style="margin-bottom:.75rem">
+    <h3>Video pipeline: MinIO upload fails / storage unavailable</h3>
+    <p style="margin:.4rem 0;font-size:.83rem;color:var(--text2)">If stages fail with storage errors, MinIO is likely misconfigured or not running.</p>
+    <div style="font-size:.82rem;color:var(--text2);margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem">
+      <div>→ Check MinIO is running: <span class="inline-code">docker compose ps | grep minio</span></div>
+      <div>→ Check credentials match: <span class="inline-code">MINIO_ACCESS_KEY</span> / <span class="inline-code">MINIO_SECRET_KEY</span> in <span class="inline-code">vibe-ai/.env</span> must equal <span class="inline-code">MINIO_ROOT_USER</span> / <span class="inline-code">MINIO_ROOT_PASSWORD</span> in <span class="inline-code">docker-compose.yml</span></div>
+      <div>→ The bucket <span class="inline-code">vibe-aiserver-data</span> is auto-created on first start — no manual setup needed</div>
+      <div>→ View files via MinIO web UI (SSH tunnel): <span class="inline-code">ssh -L 9001:localhost:9001 user@server</span> → open <span class="inline-code">http://localhost:9001</span></div>
     </div>
   </div>
 
