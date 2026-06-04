@@ -1272,8 +1272,8 @@ hr.soft{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
     <div class="qref-item"><div><div class="qref-label">Live logs (all)</div><code>docker compose logs -f</code></div></div>
     <div class="qref-item"><div><div class="qref-label">Check containers</div><code>docker compose ps</code></div></div>
     <div class="qref-item"><div><div class="qref-label">Test backend health</div><code>curl http://localhost:8080/health</code></div></div>
-    <div class="qref-item"><div><div class="qref-label">Pull latest backend</div><code>docker pull vicharanashala/vibe-backend:staging</code></div></div>
-    <div class="qref-item"><div><div class="qref-label">Full update</div><code>git pull && docker pull ... && docker compose build frontend && docker compose up -d</code></div></div>
+    <div class="qref-item" style="border-color:var(--primary);background:rgba(255,145,77,.06)"><div><div class="qref-label" style="color:var(--primary-light);font-weight:700">Update from original source code</div><code style="color:var(--primary-light)">bash update-and-rebuild.sh --git</code></div></div>
+    <div class="qref-item"><div><div class="qref-label">Patch + rebuild only (no git pull)</div><code>bash update-and-rebuild.sh</code></div></div>
     <div class="qref-item"><div><div class="qref-label">Enter backend shell</div><code>docker exec -it vibe-backend sh</code></div></div>
     <div class="qref-item"><div><div class="qref-label">Check disk usage</div><code>docker system df</code></div></div>
   </div>
